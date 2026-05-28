@@ -544,7 +544,7 @@ function renderOptions(rootId, catalog, selectedSet, onChange) {
     label.className = "option-card";
     label.innerHTML = `<input type="checkbox" value="${id}" ${selectedSet.has(id)?"checked":""} />
       <span><strong>${h(item.name||item.product||item.title)}</strong>
-      <em>${h(item.description||item.goal||item.capability||"")}</em></span>`;
+      <em>${h(item.description||item.goal||item.capability||item.content||"")}</em></span>`;
     label.querySelector("input").addEventListener("change", e => onChange(id, e.target.checked));
     root.append(label);
   });
