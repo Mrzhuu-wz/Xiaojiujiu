@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>中国电信安全方案生成工作台</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <!-- ========== Header ========== -->
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">China Telecom Security Proposal</p>
+        <h1>安全解决方案生成工作台</h1>
+      </div>
+      <div class="header-right">
+        <button id="openAdmin" class="secondary-btn small" type="button">内容管理</button>
+        <select id="activeTemplate" class="template-header-select"></select>
+        <button id="openTemplate" class="secondary-btn small" type="button">编辑模板</button>
+        <button id="resetTemplate" class="secondary-btn small" type="button">恢复推荐</button>
+        <button id="generateBtn" class="primary-btn" type="button">生成 Word</button>
+      </div>
+    </header>
+
+    <!-- ========== Main Layout ========== -->
+    <main class="workspace">
+      <section class="editor-panel" aria-label="方案配置区">
+        <nav class="tabs" aria-label="编辑步骤">
+          <button class="tab active" type="button" data-tab="basic">封面</button>
+          <button class="tab" type="button" data-tab="need">需求</button>
+          <button class="tab" type="button" data-tab="arch">架构</button>
+          <button class="tab" type="button" data-tab="product">产品</button>
+          <button class="tab" type="button" data-tab="quote">报价</button>
+        </nav>
+
+        <form id="solutionForm">
+          <!-- 封面 -->
+          <div class="tab-panel active" id="tab-basic">
+            <div class="grid two">
+              <label>客户名称 <input name="customerName" value="某某集团有限公司" /></label>
+              <label>所属行业
+                <select name="industry" id="industrySelect"></select>
+              </label>
+            </div>
+            <label>封面标题 <input name="coverTitleLine1" value="中国电信勒索病毒防护整体安全解决方案" /></label>
+            <div class="grid two">
+              <label>编制单位 <input name="branchName" value="中国电信股份有限公司xx分公司" /></label>
+              <label>编制日期 <input name="docDate" id="docDate" /></label>
+            </div>
+          </div>
+
+          <!-- 需求 -->
+          <div class="tab-panel" id="tab-need">
+            <div class="section-note">选择客户安全需求后，系统会自动组合背景、行业描述、风险短板和建设目标。</div>
+            <div class="option-grid" id="scenarioOptions"></div>
+          </div>
+
+          <!-- 架构 -->
+          <div class="tab-panel" id="tab-arch">
+            <div class="section-note">架构内容会根据已选择的安全需求和产品能力自动生成。</div>
+            <div class="summary-list" id="architectureSummary"></div>
+          </div>
+
+          <!-- 产品 -->
+          <div class="tab-panel" id="tab-product">
+            <div class="section-note">默认按需求推荐产品，也可以按客户实际建设范围勾选或取消。</div>
+            <div class="option-grid" id="productOptions"></div>
+            <div class="table-actions service-title"><h2>安全服务模块</h2></div>
+            <div class="option-grid compact" id="serviceOptions"></div>
+          </div>
+
+          <!-- 报价 -->
+          <div class="tab-panel" id="tab-quote">
+            <div class="section-note">部署建议由所选产品自动生成；报价信息请按商务口径自行填写。</div>
+            <div class="table-actions"><h2>自动部署建议</h2></div>
+            <div class="summary-list" id="deploymentSummary"></div>
+            <div class="table-actions quote-title">
+              <h2>报价概览</h2>
+              <button class="secondary-btn small" type="button" id="addQuote">新增行</button>
+            </div>
+            <div class="data-table" id="quoteTable"></div>
+          </div>
+        </form>
+      </section>
+
+      <!-- 预览区 -->
+      <aside class="preview-panel" aria-label="方案预览">
+        <div class="preview-toolbar">
+          <div>
+            <p class="eyebrow">Live Preview</p>
+            <h2 id="previewTitle">中国电信勒索病毒防护整体安全解决方案</h2>
+          </div>
+          <span id="chapterBadge">4 章</span>
+        </div>
+        <article class="doc-preview" id="preview"></article>
+      </aside>
+    </main>
+
+    <!-- ========== 模板编辑面板 ========== -->
+    <div class="slide-overlay" id="templateOverlay"></div>
+    <aside class="slide-panel" id="templatePanel">
+      <div class="slide-header">
+        <h3>编辑模板</h3>
+        <input id="templateNameInput" style="flex:1;min-width:0;margin:0;" placeholder="模板名称" />
+        <button class="icon-btn" id="closeTemplate" type="button">&times;</button>
+      </div>
+      <div class="slide-body">
+        <div class="template-styles" id="templateStyles"></div>
+      </div>
+      <div class="slide-footer">
+        <button id="saveTemplate" class="primary-btn small" type="button">保存</button>
+        <button id="newBlankTemplate" class="secondary-btn small" type="button">新建</button>
+        <button id="deleteTemplate" class="secondary-btn small danger" type="button">删除</button>
+      </div>
+    </aside>
+
+    <!-- ========== 内容管理面板 ========== -->
+    <div class="slide-overlay" id="adminOverlay"></div>
+    <aside class="slide-panel" id="adminPanel">
+      <div class="slide-header">
+        <h3>内容管理</h3>
+        <button class="icon-btn" id="closeAdmin" type="button">&times;</button>
+      </div>
+      <div class="slide-body">
+        <nav class="admin-subtabs" id="adminSubtabs">
+          <button class="admin-subtab active" data-type="industries">行业</button>
+          <button class="admin-subtab" data-type="scenarios">场景</button>
+          <button class="admin-subtab" data-type="products">产品</button>
+          <button class="admin-subtab" data-type="services">服务</button>
+        </nav>
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead id="adminTableHead"></thead>
+            <tbody id="adminTableBody"></tbody>
+          </table>
+        </div>
+        <div class="admin-add-row">
+          <button id="adminAddBtn" class="primary-btn small" type="button">+ 新增</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ========== 编辑弹窗 ========== -->
+    <div class="admin-modal" id="adminModal">
+      <div class="admin-modal-content">
+        <h3 id="adminModalTitle">编辑</h3>
+        <form class="admin-form" id="adminForm"></form>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+          <button class="secondary-btn small" type="button" id="adminCancel">取消</button>
+          <button class="primary-btn small" type="submit" form="adminForm">保存</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="app.js"></script>
+  </body>
+</html>

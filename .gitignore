@@ -1,0 +1,6 @@
+__pycache__/
+.DS_Store
+.workbuddy/
+generated/
+*.pyc
+node_modules/
