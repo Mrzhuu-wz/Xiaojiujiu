@@ -769,7 +769,15 @@ function getDefaultProducts() {
   return { "C01_PROTECT":{"id":"C01_PROTECT","title":"天翼安全大脑","layer":"边界防御","product":"天翼安全大脑","goal":"网络边界入侵防御","paragraphs":["天翼安全大脑是集本地安全防护、云端安全运营为一体的安全网关服务产品。"],"capability":"下一代防火墙","deployMode":"本地网关","spec":"按带宽","deployment":["天翼安全大脑","网络出口","1-3个工作日"],"quote":["天翼安全大脑","按带宽/年","7,200元/年起"]} };
 }
 function getDefaultServices() {
-  return { "SV_VULN":{"id":"SV_VULN","name":"漏洞扫描服务","content":"对客户信息系统进行漏洞扫描。","method":"远程","frequency":"按合同约定","deliverable":"漏洞扫描报告"} };
+  return {
+    "SV_VULN":{"id":"SV_VULN","name":"漏洞扫描服务","content":"资产探测发现、漏洞全面检测、风险评估报告、修复建议指引","method":"远程","frequency":"按合同约定","deliverable":"漏洞扫描报告"},
+    "SV_PENTEST":{"id":"SV_PENTEST","name":"渗透测试服务","content":"模拟黑客攻击、Web应用测试、内网渗透测试、漏洞利用验证","method":"远程","frequency":"按系统数","deliverable":"渗透测试报告"},
+    "SV_IR":{"id":"SV_IR","name":"应急响应服务","content":"安全事件处置、溯源分析取证、系统恢复加固、应急响应预案","method":"远程+现场","frequency":"实时","deliverable":"事故处理报告"},
+    "SV_INSPECT":{"id":"SV_INSPECT","name":"网络安全巡检服务","content":"日常安全巡检、配置合规检查、日志审计分析、隐患预警排查","method":"现场","frequency":"按季度","deliverable":"巡检报告"},
+    "SV_TRAIN":{"id":"SV_TRAIN","name":"安全培训服务","content":"安全意识提升、安全技能培训、定制课程开发、实战演练考核","method":"现场或远程","frequency":"按计划","deliverable":"培训总结"},
+    "SV_COMPLIANCE":{"id":"SV_COMPLIANCE","name":"等保测评服务","content":"等保差距分析、安全整改指导、测评辅助支撑、合规认证支持","method":"现场+远程","frequency":"按计划","deliverable":"测评报告"},
+    "SV_GUARD":{"id":"SV_GUARD","name":"重要时期安全保障服务","content":"重保期间值守、攻击实时监测、快速应急处置、安全态势汇报","method":"现场或远程","frequency":"按活动周期","deliverable":"重保总结"}
+  };
 }
 
 // 暴露到全局作用域供 onclick 使用
