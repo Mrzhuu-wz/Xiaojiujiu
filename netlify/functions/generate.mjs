@@ -8,7 +8,7 @@ const logoPath = resolve(here, "../../static/telecom-logo.png");
 const CN = "一二三四五六七八九十";
 
 const DEFAULT_TEMPLATE = {
-  docDefaults: { fontName: "Microsoft YaHei", fontSize: 22 },
+  docDefaults: { fontName: "宋体", fontSize: 22 },
   styles: {
     Normal:        { fontSize: 22, lineSpacing: 360, alignment: "both", firstLineIndent: 480, spaceAfter: 140 },
     CoverTitle:    { fontSize: 42, bold: true, color: "C00000", alignment: "center", spaceAfter: 120 },
@@ -21,6 +21,7 @@ const DEFAULT_TEMPLATE = {
     TableHeader:   { fontSize: 20, bold: true, color: "C00000", alignment: "center" },
     TableText:     { fontSize: 19 },
   },
+  content: {},
 };
 
 function esc(value) {
@@ -84,13 +85,15 @@ function table(rows, widths, aligns = []) {
 
 function cover(data) {
   const parts = [
-    paragraph(data.coverTitleLine1 || "中国电信安全解决方案", "CoverTitle", "center"),
+    paragraph(data.coverTitleLine1 || "中国电信互联网出口边界防护方案", "CoverTitle", "center"),
   ];
   if (data.customerName) parts.push(paragraph(data.customerName, "CoverCustomer", "center"));
   parts.push(paragraph(data.branchName || "中国电信股份有限公司xx分公司", "CoverMeta", "center"));
   parts.push(paragraph(data.docDate || new Date().toISOString().slice(0, 7), "CoverMeta", "center"));
-  // 封面独立节：垂直居中
-  parts.push('<w:sectPr><w:vAlign w:val="center"/><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr>');
+  // 上移5行：添加空段落，垂直居中时把标题上推
+  for (let i = 0; i < 5; i++) parts.push('<w:p><w:pPr></w:pPr></w:p>');
+  // 封面独立节：垂直居中，段落级分节符
+  parts.push('<w:p><w:pPr><w:sectPr><w:vAlign w:val="center"/><w:headerReference w:type="default" r:id="rIdHeader1"/><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr></w:pPr></w:p>');
   return parts.join("");
 }
 
@@ -153,7 +156,7 @@ function documentXml(data) {
 // ---- 动态 styles.xml 生成 ----
 
 function styleXml(styleId, styleName, cfg, isDefault = false) {
-  const fontName = cfg.fontName || "Microsoft YaHei";
+  const fontName = cfg.fontName || "宋体";
   const fontSize = cfg.fontSize || 22;
   const bold = cfg.bold || false;
   const color = cfg.color || "";
@@ -185,7 +188,7 @@ function styleXml(styleId, styleName, cfg, isDefault = false) {
 
 function buildStylesXml(template) {
   const defaults = template.docDefaults || {};
-  const fontName = defaults.fontName || "Microsoft YaHei";
+  const fontName = defaults.fontName || "宋体";
   const fontSize = defaults.fontSize || 22;
   const styles = template.styles || {};
 
@@ -225,9 +228,9 @@ async function buildDocx(data) {
   zip.file("word/_rels/document.xml.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdHeader1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/><Relationship Id="rIdFooter1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/><Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rIdLogo" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/telecom-logo.png"/></Relationships>`);
   zip.file("word/document.xml", documentXml(data));
   zip.file("word/styles.xml", buildStylesXml(template));
-  zip.file("word/header1.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:p><w:pPr><w:jc w:val="right"/></w:pPr>${logoRun(980100, 237600)}</w:p></w:hdr>`);
+  zip.file("word/header1.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:p><w:pPr><w:jc w:val="right"/></w:pPr>${logoRun(1551600, 378000)}</w:p></w:hdr>`);
   zip.file("word/_rels/header1.xml.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdLogo" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/telecom-logo.png"/></Relationships>`);
-  zip.file("word/footer1.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Microsoft YaHei" w:eastAsia="Microsoft YaHei"/><w:sz w:val="18"/></w:rPr><w:t>第 </w:t></w:r><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText>PAGE</w:instrText></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r><w:r><w:t> 页</w:t></w:r></w:p></w:ftr>`);
+  zip.file("word/footer1.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="宋体" w:eastAsia="宋体"/><w:sz w:val="18"/></w:rPr><w:t>第 </w:t></w:r><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText>PAGE</w:instrText></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r><w:r><w:t> 页</w:t></w:r></w:p></w:ftr>`);
   zip.file("word/media/telecom-logo.png", await readFile(logoPath));
   return zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE" });
 }

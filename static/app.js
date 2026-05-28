@@ -18,7 +18,7 @@ function showToast(message) {
 // ==============================
 // 全局状态
 // ==============================
-let selectedScenarios = new Set(["S01"]);
+let selectedScenarios = new Set(["S02"]);
 let selectedProducts = new Set();
 let selectedServices = new Set();
 let quotes = [];
@@ -62,14 +62,40 @@ const DEFAULT_STYLE_VALUES = {
 };
 
 // ==============================
-// 数据加载
+// 模板内容 -> 全局数据
+// ==============================
+function applyContentFromTemplate() {
+  if (!activeTemplate || !activeTemplate.content) return;
+  const ct = activeTemplate.content;
+  if (ct.industries && Object.keys(ct.industries).length) industryContexts = JSON.parse(JSON.stringify(ct.industries));
+  if (ct.scenarios && Object.keys(ct.scenarios).length) scenarios = JSON.parse(JSON.stringify(ct.scenarios));
+  if (ct.products && Object.keys(ct.products).length) products = JSON.parse(JSON.stringify(ct.products));
+  if (ct.services && Object.keys(ct.services).length) services = JSON.parse(JSON.stringify(ct.services));
+}
+
+async function initTemplateContent(apiData) {
+  // 首次加载：把 API 数据复制到模板 content
+  activeTemplate.content = activeTemplate.content || {};
+  if (!activeTemplate.content.industries || !Object.keys(activeTemplate.content.industries).length)
+    activeTemplate.content.industries = JSON.parse(JSON.stringify(apiData.industries || {}));
+  if (!activeTemplate.content.scenarios || !Object.keys(activeTemplate.content.scenarios).length)
+    activeTemplate.content.scenarios = JSON.parse(JSON.stringify(apiData.scenarios || {}));
+  if (!activeTemplate.content.products || !Object.keys(activeTemplate.content.products).length)
+    activeTemplate.content.products = JSON.parse(JSON.stringify(apiData.products || {}));
+  if (!activeTemplate.content.services || !Object.keys(activeTemplate.content.services).length)
+    activeTemplate.content.services = JSON.parse(JSON.stringify(apiData.services || {}));
+  await saveTemplateData();
+  applyContentFromTemplate();
+}
+
+// ==============================
+// 数据加载（API 仅做基线兜底）
 // ==============================
 async function loadData(type) {
   try {
     const res = await fetch(`/api/data/${type}`);
     if (res.ok) return await res.json();
   } catch {}
-  // Netlify fallback: 直接读取静态 JSON 文件
   try {
     const res = await fetch(`/data/${type}.json`);
     if (res.ok) return await res.json();
@@ -81,33 +107,20 @@ async function loadAllData() {
   const [ind, sce, prod, srv] = await Promise.all([
     loadData("industries"), loadData("scenarios"), loadData("products"), loadData("services"),
   ]);
-  if (ind) industryContexts = ind;
-  if (sce) scenarios = sce;
-  if (prod) products = prod;
-  if (srv) services = srv;
+  // 以 API 数据为基线兜底（会被模板 content 覆盖）
+  if (ind) industryContexts = JSON.parse(JSON.stringify(ind));
+  if (sce) scenarios = JSON.parse(JSON.stringify(sce));
+  if (prod) products = JSON.parse(JSON.stringify(prod));
+  if (srv) services = JSON.parse(JSON.stringify(srv));
 
-  // 合并 localStorage 的本地修改（Netlify 环境下数据持久化）
-  ["industries","scenarios","products","services"].forEach(type => {
-    try {
-      const overrides = JSON.parse(localStorage.getItem(`admin_${type}`) || "{}");
-      const target = type === "industries" ? industryContexts : type === "scenarios" ? scenarios : type === "products" ? products : services;
-      Object.entries(overrides).forEach(([k, v]) => {
-        if (v === "__deleted__") delete target[k];
-        else target[k] = v;
-      });
-    } catch {}
-  });
-
-  // 如果 API 没拿到，用默认值兜底
   if (!Object.keys(scenarios).length) scenarios = getDefaultScenarios();
   if (!Object.keys(products).length) products = getDefaultProducts();
   if (!Object.keys(services).length) services = getDefaultServices();
 
-  // 初始化选中
-  const s01 = scenarios["S01"];
-  if (s01) {
-    selectedProducts = new Set(s01.products || []);
-    selectedServices = new Set(s01.services || []);
+  const s02 = scenarios["S02"];
+  if (s02) {
+    selectedProducts = new Set(s02.products || []);
+    selectedServices = new Set(s02.services || []);
   }
   syncQuotes();
   populateIndustrySelect();
@@ -174,7 +187,7 @@ async function loadTemplateData(name) {
   // localStorage 兜底
   const local = loadLocalTemplate(name);
   if (local) { activeTemplate = local; activeTemplateName = local.name || name; return; }
-  activeTemplate = { name: name || "默认模板", docDefaults: { fontName: "Microsoft YaHei", fontSize: 22 }, styles: JSON.parse(JSON.stringify(DEFAULT_STYLE_VALUES)) };
+  activeTemplate = { name: name || "默认模板", docDefaults: { fontName: "宋体", fontSize: 22 }, styles: JSON.parse(JSON.stringify(DEFAULT_STYLE_VALUES)) };
   activeTemplateName = activeTemplate.name;
 }
 
@@ -220,7 +233,25 @@ async function deleteTemplateData() {
 
 async function switchTemplate(name) {
   await loadTemplateData(name);
+  // 如果模板已有 content 数据 → 应用到全局
+  // 否则从 API 数据初始化 content（首次使用）
+  const ct = activeTemplate.content;
+  const hasContent = ct && (Object.keys(ct.scenarios || {}).length || Object.keys(ct.products || {}).length);
+  if (hasContent) {
+    applyContentFromTemplate();
+    // 重新同步选中状态
+    const s02 = scenarios["S02"];
+    if (s02) {
+      selectedProducts = new Set(s02.products || []);
+      selectedServices = new Set(s02.services || []);
+    }
+  } else {
+    // 首次：用 API 数据初始化模板 content
+    await initTemplateContent({ industries: industryContexts, scenarios, products, services });
+  }
   populateTemplateSelect();
+  populateIndustrySelect();
+  syncQuotes();
   renderPreview();
 }
 
@@ -249,7 +280,7 @@ function renderTemplateEditor() {
     return `<div class="style-card" data-style="${sid}">
       <div class="style-card-header"><strong>${meta.label}</strong><span class="style-id">${sid}</span></div>
       <div class="style-card-body">
-        <label>字体<input data-field="fontName" value="${h(cfg.fontName||'')}" placeholder="Microsoft YaHei" /></label>
+        <label>字体<input data-field="fontName" value="${h(cfg.fontName||'')}" placeholder="宋体" /></label>
         <label>字号<input type="number" data-field="fontSize" value="${cfg.fontSize||''}" placeholder="22" min="8" max="72" /></label>
         <label>颜色<input type="color" data-field="color" value="#${(cfg.color||'000000').replace(/^#?/,'')}" /></label>
         <label>加粗<input type="checkbox" data-field="bold" ${cfg.bold?'checked':''} /></label>
@@ -332,29 +363,42 @@ function renderAdminTable() {
 
 async function deleteAdminItem(id) {
   if (!confirm(`确认删除「${id}」？`)) return;
-  try { await fetch(`/api/data/${adminType}/${encodeURIComponent(id)}/delete`, { method: "POST" }); } catch {}
-  // localStorage 同步
-  try {
-    const ls = JSON.parse(localStorage.getItem(`admin_${adminType}`) || "{}");
-    ls[id] = "__deleted__";
-    localStorage.setItem(`admin_${adminType}`, JSON.stringify(ls));
-  } catch {}
+  if (!activeTemplate.content) activeTemplate.content = {};
+  if (!activeTemplate.content[adminType]) activeTemplate.content[adminType] = {};
+  delete activeTemplate.content[adminType][id];
+  await saveTemplateData();
   await refreshAdminData();
+  await loadContentToGlobals();
+  renderAll();
 }
 
 async function refreshAdminData() {
-  let data = await loadData(adminType);
-  if (!data) data = {};
-  // 合并 localStorage 的修改
-  try {
-    const overrides = JSON.parse(localStorage.getItem(`admin_${adminType}`) || "{}");
-    Object.entries(overrides).forEach(([k, v]) => {
-      if (v === "__deleted__") delete data[k];
-      else data[k] = v;
-    });
-  } catch {}
+  // 从模板 content 读取（不再调 API）
+  if (!activeTemplate.content) activeTemplate.content = {};
+  let data = activeTemplate.content[adminType];
+  if (!data) {
+    // 首次：从全局数据初始化
+    data = adminType === "industries" ? industryContexts
+      : adminType === "scenarios" ? scenarios
+      : adminType === "products" ? products
+      : services;
+    activeTemplate.content[adminType] = JSON.parse(JSON.stringify(data || {}));
+  }
   adminCurrentData = data;
   renderAdminTable();
+}
+
+function loadContentToGlobals() {
+  // 将 template.content 同步到全局变量
+  if (!activeTemplate.content) return;
+  const ct = activeTemplate.content;
+  if (ct.industries) {
+    industryContexts = JSON.parse(JSON.stringify(ct.industries));
+    populateIndustrySelect();
+  }
+  if (ct.scenarios) scenarios = JSON.parse(JSON.stringify(ct.scenarios));
+  if (ct.products) products = JSON.parse(JSON.stringify(ct.products));
+  if (ct.services) services = JSON.parse(JSON.stringify(ct.services));
 }
 
 function openAdminModal(id) {
@@ -369,7 +413,7 @@ function openAdminModal(id) {
     form.innerHTML = `
       <label>行业标识<input name="id" value="${h(id||'')}" ${id?'readonly':''} /></label>
       <label>行业名称<input name="name" value="${h(item.name||'')}" /></label>
-      ${["S01","S02","S03","S04","S05","S06"].map(s=>`<label>${s} 场景描述<textarea name="${s}">${h(item[s]||'')}</textarea></label>`).join("")}`;
+      ${["S02","S01","S03","S04","S05","S06"].map(s=>`<label>${s} 场景描述<textarea name="${s}">${h(item[s]||'')}</textarea></label>`).join("")}`;
   } else if (adminType === "scenarios") {
     const w = item.weaknesses || [];
     form.innerHTML = `
@@ -426,7 +470,6 @@ async function submitAdminForm() {
   if (adminType === "scenarios") {
     data.products = (data.products || "").split(",").map(s => s.trim()).filter(Boolean);
     data.services = (data.services || "").split(",").map(s => s.trim()).filter(Boolean);
-    // 收集 weaknesses
     const wRows = document.querySelectorAll("#weaknessList .weakness-row");
     data.weaknesses = [];
     wRows.forEach(row => {
@@ -441,19 +484,16 @@ async function submitAdminForm() {
     data.deployment = [data.product || "", "", "按需"];
   }
 
-  try {
-    await fetch(`/api/data/${adminType}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
-  } catch {}
-  // localStorage 兜底
-  try {
-    const ls = JSON.parse(localStorage.getItem(`admin_${adminType}`) || "{}");
-    ls[data.id] = data;
-    localStorage.setItem(`admin_${adminType}`, JSON.stringify(ls));
-  } catch {}
+  // 写入模板 content 并保存
+  if (!activeTemplate.content) activeTemplate.content = {};
+  if (!activeTemplate.content[adminType]) activeTemplate.content[adminType] = {};
+  activeTemplate.content[adminType][data.id] = data;
+  await saveTemplateData();
+
   showToast("保存成功");
   closeAdminModal();
   await refreshAdminData();
-  await loadAllData();
+  await loadContentToGlobals();
   renderAll();
 }
 
@@ -592,7 +632,7 @@ function table(headers, rows) {
 function templateStyleCSS() {
   if (!activeTemplate || !activeTemplate.styles) return "";
   const defaults = activeTemplate.docDefaults || {};
-  const fontFamily = defaults.fontName || "Microsoft YaHei";
+  const fontFamily = defaults.fontName || "宋体";
   const st = activeTemplate.styles;
   const map = { CoverTitle:".cover h2", CoverCustomer:".cover > p", CoverMeta:".cover footer", Heading1:".chapter h3", Heading2:".chapter h4", Heading3:".chapter h5", Normal:".chapter p, .chapter li", TableHeader:".preview-table th", TableText:".preview-table td" };
   let css = `.page{font-family:"${fontFamily}",sans-serif}\n`;
@@ -659,7 +699,7 @@ function renderPreview() {
 function renderAll() {
   renderOptions("#scenarioOptions", scenarios, selectedScenarios, (id, checked) => {
     if (checked) selectedScenarios.add(id); else selectedScenarios.delete(id);
-    if (!selectedScenarios.size) selectedScenarios.add("S01");
+    if (!selectedScenarios.size) selectedScenarios.add("S02");
     mergeScenarioRecommendations();
     renderAll();
   });
@@ -708,7 +748,9 @@ document.querySelector("#templateOverlay")?.addEventListener("click", () => {
 
 document.querySelector("#saveTemplate")?.addEventListener("click", saveTemplateData);
 document.querySelector("#newBlankTemplate")?.addEventListener("click", () => {
-  activeTemplate = { name: "新建模板", docDefaults: { fontName: "Microsoft YaHei", fontSize: 22 }, styles: JSON.parse(JSON.stringify(DEFAULT_STYLE_VALUES)) };
+  // 深拷贝当前模板的 content，新建的模板继承当前内容
+  const newContent = activeTemplate?.content ? JSON.parse(JSON.stringify(activeTemplate.content)) : {};
+  activeTemplate = { name: "新建模板", docDefaults: { fontName: "宋体", fontSize: 22 }, styles: JSON.parse(JSON.stringify(DEFAULT_STYLE_VALUES)), content: newContent };
   activeTemplateName = "新建模板";
   document.querySelector("#templateNameInput").value = "新建模板";
   renderTemplateEditor();
@@ -717,7 +759,7 @@ document.querySelector("#newBlankTemplate")?.addEventListener("click", () => {
 document.querySelector("#deleteTemplate")?.addEventListener("click", deleteTemplateData);
 
 // 内容管理面板
-document.querySelector("#openAdmin")?.addEventListener("click", () => { adminType = "industries"; adminCurrentData = industryContexts || {}; openAdminPanel(); });
+document.querySelector("#openAdmin")?.addEventListener("click", () => { adminType = "industries"; adminCurrentData = (activeTemplate?.content?.industries) || industryContexts || {}; openAdminPanel(); });
 document.querySelector("#closeAdmin")?.addEventListener("click", closeAdminPanel);
 document.querySelector("#adminOverlay")?.addEventListener("click", closeAdminPanel);
 document.querySelectorAll("#adminSubtabs .admin-subtab").forEach(btn => {
@@ -725,8 +767,14 @@ document.querySelectorAll("#adminSubtabs .admin-subtab").forEach(btn => {
     document.querySelectorAll("#adminSubtabs .admin-subtab").forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
     adminType = btn.dataset.type;
-    const data = await loadData(adminType);
-    if (data) adminCurrentData = data;
+    // 从模板 content 读取，兜底从全局变量
+    const ct = activeTemplate?.content;
+    adminCurrentData = (ct && ct[adminType] && Object.keys(ct[adminType]).length)
+      ? ct[adminType]
+      : (adminType === "industries" ? industryContexts
+        : adminType === "scenarios" ? scenarios
+        : adminType === "products" ? products
+        : services);
     renderAdminTable();
   });
 });
@@ -737,10 +785,21 @@ document.querySelector("#adminForm")?.addEventListener("submit", e => { e.preven
 
 // 报价
 document.querySelector("#addQuote")?.addEventListener("click", () => { quotes.push({ name:"", spec:"", price:"", remark:"" }); renderAll(); });
-document.querySelector("#resetTemplate")?.addEventListener("click", () => {
-  const s01 = scenarios["S01"];
-  selectedScenarios = new Set(["S01"]);
-  if (s01) { selectedProducts = new Set(s01.products||[]); selectedServices = new Set(s01.services||[]); }
+document.querySelector("#resetTemplate")?.addEventListener("click", async () => {
+  // 重新从 API 加载数据，覆盖当前模板的 content
+  const [ind, sce, prod, srv] = await Promise.all([
+    loadData("industries"), loadData("scenarios"), loadData("products"), loadData("services"),
+  ]);
+  if (!activeTemplate.content) activeTemplate.content = {};
+  if (ind) { industryContexts = JSON.parse(JSON.stringify(ind)); activeTemplate.content.industries = JSON.parse(JSON.stringify(ind)); }
+  if (sce) { scenarios = JSON.parse(JSON.stringify(sce)); activeTemplate.content.scenarios = JSON.parse(JSON.stringify(sce)); }
+  if (prod) { products = JSON.parse(JSON.stringify(prod)); activeTemplate.content.products = JSON.parse(JSON.stringify(prod)); }
+  if (srv) { services = JSON.parse(JSON.stringify(srv)); activeTemplate.content.services = JSON.parse(JSON.stringify(srv)); }
+  await saveTemplateData();
+  const s02 = scenarios["S02"];
+  selectedScenarios = new Set(["S02"]);
+  if (s02) { selectedProducts = new Set(s02.products||[]); selectedServices = new Set(s02.services||[]); }
+  populateIndustrySelect();
   syncQuotes(); renderAll();
   showToast("已恢复推荐配置");
 });
@@ -763,7 +822,7 @@ document.querySelector("#docDate") && (document.querySelector("#docDate").value 
 // 默认数据兜底
 // ==============================
 function getDefaultScenarios() {
-  return { "S01": { "id":"S01","name":"勒索病毒防护","description":"面向勒索病毒入侵的纵深防护方案。","background":"勒索病毒已成为全球各类组织面临的持续性、高危害安全威胁之一。","weaknesses":[{"title":"边界防护薄弱","description":"缺乏针对新型变种及加密流量的实时检测能力。"}],"analysis":"构建纵深防护体系。","architecture":"四道防线形成立体防护。","products":["C01_PROTECT","C02_SASE","C03_SERVER","C04_MSSP"],"services":["SV_VULN","SV_PENTEST"]} };
+  return { "S02": { "id":"S02","name":"互联网出口边界防护","description":"强化出口防火墙、入侵防御、应用识别、审计和暴露面收敛。","background":"互联网出口是组织连接外部世界的第一道关口，也是绝大多数网络攻击的入口。随着业务上云、分支机构增多和远程办公普及，互联网出口数量和形态变得多样复杂。","weaknesses":[{"title":"防护能力不足","description":"出口防火墙老旧，无法进行深度应用识别和入侵防御，对新型恶意软件、勒索病毒等威胁检测率低。"},{"title":"暴露面管理缺失","description":"内部系统通过端口映射直接暴露，高危端口默认开放，成为攻击者扫描和利用的入口。"},{"title":"流量不可视","description":"缺乏全流量日志和审计能力，安全事件发生后无法回溯分析，难以满足合规留存要求。"},{"title":"策略粗放","description":"访问控制策略长期不更新，权限过大，出口安全设备孤立运行，无法与内网安全协同防御。"}],"analysis":"建议围绕出口边界建立一体化防护体系，形成可视、可管、可追溯的边界安全能力。","architecture":"方案以互联网出口为核心控制点，部署天翼安全大脑防护版和审计版，结合云脉SASE收敛公网暴露面。","products":["C01_PROTECT","C01_AUDIT","C02_SASE","C04_MSSP"],"services":["SV_VULN","SV_INSPECT"]}, "S01": { "id":"S01","name":"勒索病毒防护","description":"面向勒索病毒入侵的纵深防护方案。","background":"勒索病毒已成为全球各类组织面临的持续性、高危害安全威胁之一。","weaknesses":[{"title":"边界防护薄弱","description":"缺乏针对新型变种及加密流量的实时检测能力。"}],"analysis":"构建纵深防护体系。","architecture":"四道防线形成立体防护。","products":["C01_PROTECT","C02_SASE","C03_SERVER","C04_MSSP"],"services":["SV_VULN","SV_PENTEST"]} };
 }
 function getDefaultProducts() {
   return { "C01_PROTECT":{"id":"C01_PROTECT","title":"天翼安全大脑","layer":"边界防御","product":"天翼安全大脑","goal":"网络边界入侵防御","paragraphs":["天翼安全大脑是集本地安全防护、云端安全运营为一体的安全网关服务产品。"],"capability":"下一代防火墙","deployMode":"本地网关","spec":"按带宽","deployment":["天翼安全大脑","网络出口","1-3个工作日"],"quote":["天翼安全大脑","按带宽/年","7,200元/年起"]} };
@@ -789,9 +848,8 @@ window.addWeaknessRow = addWeaknessRow;
 // 初始化
 // ==============================
 (async function init() {
-  await loadAllData();
-  await loadTemplates();
-  await switchTemplate("默认模板");
-  syncQuotes();
-  renderAll();
+  await loadAllData();      // API 数据 → 全局变量（基线）
+  await loadTemplates();    // 加载模板列表
+  await switchTemplate("默认模板");  // 加载模板 → 应用 content（或初始化） → syncQuotes + renderPreview
+  renderAll();              // 完整渲染（选项、报价、摘要）
 })();
