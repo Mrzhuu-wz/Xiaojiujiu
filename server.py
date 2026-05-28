@@ -25,7 +25,7 @@ CHINESE_NUMBERS = "一二三四五六七八九十"
 DEFAULT_TEMPLATE = {
     "name": "默认模板",
     "docDefaults": {
-        "fontName": "Microsoft YaHei",
+        "fontName": "宋体",
         "fontSize": 22,
     },
     "styles": {
@@ -88,6 +88,7 @@ DEFAULT_TEMPLATE = {
             "fontSize": 19,
         },
     },
+    "content": {},
 }
 
 
@@ -165,7 +166,7 @@ def delete_template(name):
 
 def _style_xml(style_id, style_name, cfg, is_default=False):
     """根据模板配置生成单个样式XML"""
-    font_name = cfg.get("fontName", "Microsoft YaHei")
+    font_name = cfg.get("fontName", "宋体")
     font_size = cfg.get("fontSize", 22)
     bold = cfg.get("bold", False)
     color = cfg.get("color", "")
@@ -218,7 +219,7 @@ def _style_xml(style_id, style_name, cfg, is_default=False):
 def build_styles_xml(template):
     """根据模板 JSON 生成完整的 styles.xml"""
     defaults = template.get("docDefaults", {})
-    font_name = defaults.get("fontName", "Microsoft YaHei")
+    font_name = defaults.get("fontName", "宋体")
     font_size = defaults.get("fontSize", 22)
 
     styles = template.get("styles", {})
@@ -405,7 +406,7 @@ def table(rows, widths=None, aligns=None):
 # ---------------------------------------------------------------------------
 
 def cover(data):
-    line1 = data.get("coverTitleLine1") or "中国电信勒索病毒防护"
+    line1 = data.get("coverTitleLine1") or "中国电信互联网出口边界防护方案"
     branch = data.get("branchName") or "中国电信股份有限公司xx分公司"
     date = data.get("docDate") or month_label()
     customer = data.get("customerName") or ""
@@ -420,14 +421,22 @@ def cover(data):
             paragraph(date, "CoverMeta", "center"),
         ]
     )
-    # 封面独立节：垂直居中
+    # 上移5行：在封面内容末尾添加5个空段落，垂直居中时会把标题上推
+    for _ in range(5):
+        content.append('<w:p><w:pPr></w:pPr></w:p>')
+    # 封面独立节：垂直居中，使用段落级分节符确保换页
     sect_pr = (
+        '<w:p>'
+        '<w:pPr>'
         '<w:sectPr>'
         '<w:vAlign w:val="center"/>'
+        '<w:headerReference w:type="default" r:id="rIdHeader1"/>'
         '<w:pgSz w:w="11906" w:h="16838"/>'
         '<w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"'
         ' w:header="720" w:footer="720" w:gutter="0"/>'
         '</w:sectPr>'
+        '</w:pPr>'
+        '</w:p>'
     )
     return "".join(content) + sect_pr
 
@@ -566,7 +575,8 @@ def build_document_xml(data):
         'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
         "<w:body>"
         + "".join(body)
-        + '<w:sectPr><w:headerReference w:type="default" r:id="rIdHeader1"/>'
+        +         '<w:sectPr>'
+        '<w:headerReference w:type="default" r:id="rIdHeader1"/>'
         '<w:footerReference w:type="default" r:id="rIdFooter1"/>'
         '<w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" '
         'w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/>'
@@ -609,13 +619,13 @@ def build_docx(data, template_name=None):
 </Relationships>"""
 
     header = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:p><w:pPr><w:jc w:val="right"/></w:pPr>""" + logo_run(980100, 237600) + """</w:p></w:hdr>"""
+<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:p><w:pPr><w:jc w:val="right"/></w:pPr>""" + logo_run(1551600, 378000) + """</w:p></w:hdr>"""
     header_rels = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Id="rIdLogo" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/telecom-logo.png"/>
 </Relationships>"""
     footer = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Microsoft YaHei" w:eastAsia="Microsoft YaHei"/><w:sz w:val="18"/></w:rPr><w:t>第 </w:t></w:r><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText>PAGE</w:instrText></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r><w:r><w:t> 页</w:t></w:r></w:p></w:ftr>"""
+<w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="宋体" w:eastAsia="宋体"/><w:sz w:val="18"/></w:rPr><w:t>第 </w:t></w:r><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText>PAGE</w:instrText></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r><w:r><w:t> 页</w:t></w:r></w:p></w:ftr>"""
 
     with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as docx:
         docx.writestr("[Content_Types].xml", content_types)
