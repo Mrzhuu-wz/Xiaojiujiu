@@ -11,3 +11,8 @@
   for = "/*"
   [headers.values]
     X-Content-Type-Options = "nosniff"
+
+[[redirects]]
+  from = "/api/generate"
+  to = "/.netlify/functions/generate"
+  status = 200

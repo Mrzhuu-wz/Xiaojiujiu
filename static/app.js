@@ -809,9 +809,21 @@ document.querySelector("#generateBtn")?.addEventListener("click", async () => {
   try {
     const res = await fetch("/api/generate", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(collectData()) });
     if (!res.ok) throw new Error("生成失败");
-    const result = await res.json();
-    showToast("Word 已生成，正在下载");
-    window.location.href = result.url;
+    const contentType = res.headers.get("Content-Type") || "";
+    if (contentType.includes("application/json")) {
+      const result = await res.json();
+      showToast("Word 已生成，正在下载");
+      window.location.href = result.url;
+    } else {
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "安全解决方案.docx";
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast("Word 已生成，正在下载");
+    }
   } catch(e) { showToast(e.message); }
   finally { btn.disabled = false; btn.textContent = "生成 Word"; }
 });
