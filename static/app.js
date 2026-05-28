@@ -69,6 +69,11 @@ async function loadData(type) {
     const res = await fetch(`/api/data/${type}`);
     if (res.ok) return await res.json();
   } catch {}
+  // Netlify fallback: 直接读取静态 JSON 文件
+  try {
+    const res = await fetch(`/data/${type}.json`);
+    if (res.ok) return await res.json();
+  } catch {}
   return null;
 }
 
@@ -80,6 +85,18 @@ async function loadAllData() {
   if (sce) scenarios = sce;
   if (prod) products = prod;
   if (srv) services = srv;
+
+  // 合并 localStorage 的本地修改（Netlify 环境下数据持久化）
+  ["industries","scenarios","products","services"].forEach(type => {
+    try {
+      const overrides = JSON.parse(localStorage.getItem(`admin_${type}`) || "{}");
+      const target = type === "industries" ? industryContexts : type === "scenarios" ? scenarios : type === "products" ? products : services;
+      Object.entries(overrides).forEach(([k, v]) => {
+        if (v === "__deleted__") delete target[k];
+        else target[k] = v;
+      });
+    } catch {}
+  });
 
   // 如果 API 没拿到，用默认值兜底
   if (!Object.keys(scenarios).length) scenarios = getDefaultScenarios();
@@ -113,15 +130,39 @@ function populateIndustrySelect() {
 }
 
 // ==============================
-// 模板管理
+// 模板管理（API + localStorage 兜底）
 // ==============================
+function LOCAL(key) { return `tpl_${key}`; }
+function loadLocalTemplates() {
+  try { return JSON.parse(localStorage.getItem("templates_list") || "[]"); } catch { return []; }
+}
+function saveLocalTemplates(list) {
+  localStorage.setItem("templates_list", JSON.stringify(list));
+}
+function loadLocalTemplate(name) {
+  try { return JSON.parse(localStorage.getItem(LOCAL(name))); } catch { return null; }
+}
+function saveLocalTemplate(name, data) {
+  localStorage.setItem(LOCAL(name), JSON.stringify(data));
+}
+function deleteLocalTemplate(name) {
+  localStorage.removeItem(LOCAL(name));
+  const list = loadLocalTemplates().filter(t => t.name !== name);
+  saveLocalTemplates(list);
+}
+
 async function loadTemplates() {
   try {
     const res = await fetch("/api/templates");
-    if (res.ok) templates = await res.json();
-  } catch {
-    templates = [{ name: "默认模板", displayName: "默认模板" }];
+    if (res.ok) { templates = await res.json(); populateTemplateSelect(); return; }
+  } catch {}
+  // localStorage 兜底
+  let list = loadLocalTemplates();
+  if (!list.length) {
+    list = [{ name: "默认模板", displayName: "默认模板" }];
+    saveLocalTemplates(list);
   }
+  templates = list;
   populateTemplateSelect();
 }
 
@@ -130,6 +171,9 @@ async function loadTemplateData(name) {
     const res = await fetch(`/api/templates/${encodeURIComponent(name)}`);
     if (res.ok) { activeTemplate = await res.json(); activeTemplateName = activeTemplate.name || name; return; }
   } catch {}
+  // localStorage 兜底
+  const local = loadLocalTemplate(name);
+  if (local) { activeTemplate = local; activeTemplateName = local.name || name; return; }
   activeTemplate = { name: name || "默认模板", docDefaults: { fontName: "Microsoft YaHei", fontSize: 22 }, styles: JSON.parse(JSON.stringify(DEFAULT_STYLE_VALUES)) };
   activeTemplateName = activeTemplate.name;
 }
@@ -138,6 +182,7 @@ async function saveTemplateData() {
   if (!activeTemplate) return;
   const input = document.querySelector("#templateNameInput");
   if (input) activeTemplate.name = input.value || activeTemplateName;
+  // 尝试 API
   try {
     const res = await fetch("/api/templates", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(activeTemplate) });
     if (res.ok) {
@@ -145,21 +190,32 @@ async function saveTemplateData() {
       activeTemplateName = r.name;
       showToast("模板已保存");
       await loadTemplates();
-      populateTemplateSelect();
       return;
     }
   } catch {}
-  showToast("模板保存失败");
+  // localStorage 兜底
+  saveLocalTemplate(activeTemplateName, activeTemplate);
+  let list = loadLocalTemplates();
+  if (!list.find(t => t.name === activeTemplateName)) {
+    list.push({ name: activeTemplateName, displayName: activeTemplate.name || activeTemplateName });
+    saveLocalTemplates(list);
+  }
+  templates = list;
+  populateTemplateSelect();
+  showToast("模板已保存（本地）");
 }
 
 async function deleteTemplateData() {
   if (activeTemplateName === "默认模板") { showToast("不能删除默认模板"); return; }
   if (!confirm(`确认删除模板「${activeTemplateName}」？`)) return;
   try {
-    await fetch(`/api/templates/${encodeURIComponent(activeTemplateName)}/delete`, { method: "POST" });
-    showToast("模板已删除");
-    await switchTemplate("默认模板");
-  } catch { showToast("删除失败"); }
+    const res = await fetch(`/api/templates/${encodeURIComponent(activeTemplateName)}/delete`, { method: "POST" });
+    if (res.ok) { showToast("模板已删除"); await switchTemplate("默认模板"); return; }
+  } catch {}
+  // localStorage 兜底
+  deleteLocalTemplate(activeTemplateName);
+  showToast("模板已删除（本地）");
+  await switchTemplate("默认模板");
 }
 
 async function switchTemplate(name) {
@@ -276,13 +332,28 @@ function renderAdminTable() {
 
 async function deleteAdminItem(id) {
   if (!confirm(`确认删除「${id}」？`)) return;
-  await fetch(`/api/data/${adminType}/${encodeURIComponent(id)}/delete`, { method: "POST" });
+  try { await fetch(`/api/data/${adminType}/${encodeURIComponent(id)}/delete`, { method: "POST" }); } catch {}
+  // localStorage 同步
+  try {
+    const ls = JSON.parse(localStorage.getItem(`admin_${adminType}`) || "{}");
+    ls[id] = "__deleted__";
+    localStorage.setItem(`admin_${adminType}`, JSON.stringify(ls));
+  } catch {}
   await refreshAdminData();
 }
 
 async function refreshAdminData() {
-  const data = await loadData(adminType);
-  if (data) adminCurrentData = data;
+  let data = await loadData(adminType);
+  if (!data) data = {};
+  // 合并 localStorage 的修改
+  try {
+    const overrides = JSON.parse(localStorage.getItem(`admin_${adminType}`) || "{}");
+    Object.entries(overrides).forEach(([k, v]) => {
+      if (v === "__deleted__") delete data[k];
+      else data[k] = v;
+    });
+  } catch {}
+  adminCurrentData = data;
   renderAdminTable();
 }
 
@@ -372,12 +443,18 @@ async function submitAdminForm() {
 
   try {
     await fetch(`/api/data/${adminType}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
-    showToast("保存成功");
-    closeAdminModal();
-    await refreshAdminData();
-    await loadAllData(); // 刷新主界面数据
-    renderAll();
-  } catch (e) { showToast("保存失败"); }
+  } catch {}
+  // localStorage 兜底
+  try {
+    const ls = JSON.parse(localStorage.getItem(`admin_${adminType}`) || "{}");
+    ls[data.id] = data;
+    localStorage.setItem(`admin_${adminType}`, JSON.stringify(ls));
+  } catch {}
+  showToast("保存成功");
+  closeAdminModal();
+  await refreshAdminData();
+  await loadAllData();
+  renderAll();
 }
 
 function closeAdminModal() {
