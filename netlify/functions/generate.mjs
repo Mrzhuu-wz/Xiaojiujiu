@@ -89,7 +89,8 @@ function cover(data) {
   if (data.customerName) parts.push(paragraph(data.customerName, "CoverCustomer", "center"));
   parts.push(paragraph(data.branchName || "中国电信股份有限公司xx分公司", "CoverMeta", "center"));
   parts.push(paragraph(data.docDate || new Date().toISOString().slice(0, 7), "CoverMeta", "center"));
-  parts.push(pageBreak());
+  // 封面独立节：垂直居中
+  parts.push('<w:sectPr><w:vAlign w:val="center"/><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr>');
   return parts.join("");
 }
 

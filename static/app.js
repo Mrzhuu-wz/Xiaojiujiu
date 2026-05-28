@@ -523,6 +523,13 @@ function syncQuotes() {
     const name = q[0] || "";
     return existing.get(name) || { name, spec: q[1] || "", price: q[2] || "", remark: "" };
   });
+  // 自动追加选中的安全服务行
+  serviceList().forEach(item => {
+    const sName = item.name || "";
+    if (!quotes.find(q => q.name === sName)) {
+      quotes.push({ name: sName, spec: "按需定制", price: "按需定制", remark: "" });
+    }
+  });
 }
 
 // ==============================
@@ -632,6 +639,13 @@ function renderPreview() {
         <p><strong>核心能力：</strong>${h(p.capability)}</p>
         <p><strong>部署方式：</strong>${h(p.deployMode)}</p>
         <p><strong>推荐规格：</strong>${h(p.spec)}</p>`).join("")}
+      ${data.serviceItems && data.serviceItems.length ? `
+        <h4>安全服务模块</h4>
+        ${data.serviceItems.map(s => `
+          <p><strong>${h(s.name)}：</strong>${h(s.content||'')}</p>
+          <p>服务方式：${h(s.method||'')}　｜　频次：${h(s.frequency||'')}　｜　交付：${h(s.deliverable||'')}</p>
+        `).join("")}
+      ` : ""}
     </section>
     <section class="chapter">
       <h3>四、部署与报价</h3>

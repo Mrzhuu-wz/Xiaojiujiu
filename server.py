@@ -418,10 +418,18 @@ def cover(data):
         [
             paragraph(branch, "CoverMeta", "center"),
             paragraph(date, "CoverMeta", "center"),
-            page_break(),
         ]
     )
-    return "".join(content)
+    # 封面独立节：垂直居中
+    sect_pr = (
+        '<w:sectPr>'
+        '<w:vAlign w:val="center"/>'
+        '<w:pgSz w:w="11906" w:h="16838"/>'
+        '<w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"'
+        ' w:header="720" w:footer="720" w:gutter="0"/>'
+        '</w:sectPr>'
+    )
+    return "".join(content) + sect_pr
 
 
 def background_section(data):
