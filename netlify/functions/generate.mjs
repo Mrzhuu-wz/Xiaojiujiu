@@ -275,11 +275,9 @@ export default async (req) => {
     const data = await req.json();
     const filename = `${safeFilename(data.solutionTitle || data.coverTitleLine1)}.docx`;
     const buffer = await buildDocx(data);
-    return new Response(buffer, {
-      headers: {
-        "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`,
-      },
+    const b64 = buffer.toString("base64");
+    return new Response(JSON.stringify({ filename, data: b64 }), {
+      headers: { "Content-Type": "application/json; charset=utf-8" },
     });
   } catch (error) {
     return new Response(JSON.stringify({ error: error.message }), {

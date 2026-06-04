@@ -835,7 +835,23 @@ document.querySelector("#generateBtn")?.addEventListener("click", async () => {
       result.filename
     );
 
-    window.location.href = result.url;
+    // Netlify serverless 返回 base64 数据，本地服务器返回 URL
+    if (result.data) {
+      const byteChars = atob(result.data);
+      const byteArr = new Uint8Array(byteChars.length);
+      for (let i = 0; i < byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i);
+      const blob = new Blob([byteArr], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = result.filename || "方案.docx";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } else if (result.url) {
+      window.location.href = result.url;
+    }
   } catch(e) { showToast(e.message); }
   finally { btn.disabled = false; btn.textContent = "生成 Word"; }
 });
