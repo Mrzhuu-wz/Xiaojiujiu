@@ -1,0 +1,8 @@
+__pycache__/
+.DS_Store
+.workbuddy/
+generated/
+stats/
+topology/
+*.pyc
+node_modules/

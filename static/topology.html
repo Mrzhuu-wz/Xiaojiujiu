@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>网络拓扑编辑器 - 中国电信安全方案</title>
+  <link rel="stylesheet" href="topology.css">
+</head>
+<body>
+  <div class="topology-container">
+    <!-- 顶部工具栏 -->
+    <header class="topology-header">
+      <div class="header-left">
+        <button class="btn-secondary" onclick="goBack()">← 返回方案</button>
+        <h1>网络拓扑编辑器</h1>
+      </div>
+      <div class="header-center">
+        <select id="topologyTemplate" onchange="handleTemplateChange(this.value)">
+          <option value="">-- 选择场景模板 --</option>
+          <option value="three-tier">企业三层网络结构</option>
+          <optgroup label="已保存的模板" id="savedTemplatesGroup">
+            <!-- 动态生成 -->
+          </optgroup>
+        </select>
+        <button class="btn-secondary btn-sm" id="deleteTemplateBtn" style="display:none;" onclick="deleteCurrentTemplate()">🗑️ 删模板</button>
+      </div>
+      <div class="header-right">
+        <button class="btn-secondary" onclick="clearTopology()">清空画布</button>
+        <button class="btn-secondary" id="saveTemplateBtn" onclick="saveCurrentAsTemplate()">💾 保存模板</button>
+        <button class="btn-primary" onclick="exportTopology()">导出SVG</button>
+        <button class="btn-primary" onclick="saveTopology()">保存拓扑</button>
+      </div>
+    </header>
+
+    <div class="topology-main">
+      <!-- 左侧组件库 -->
+      <aside class="component-library">
+        <div class="library-section">
+          <h3>🖥️ 基础网络设备</h3>
+          <div class="component-grid" id="networkComponents">
+            <!-- 动态生成 -->
+          </div>
+        </div>
+
+        <div class="library-section">
+          <h3>🛡️ 电信安全产品</h3>
+          <div class="component-grid" id="securityComponents">
+            <!-- 动态生成 -->
+          </div>
+        </div>
+
+        <div class="library-section">
+          <h3>🗺️ 区域组件</h3>
+          <div class="component-grid" id="zoneComponents">
+            <!-- 动态生成 -->
+          </div>
+        </div>
+        <!-- 连接线类型已移除 -->
+      </aside>
+
+      <!-- 中央画布 -->
+      <main class="topology-canvas-wrapper">
+        <div class="canvas-toolbar">
+          <button class="toolbar-btn" id="undoBtn" disabled>↩️ 撤销</button>
+          <button class="toolbar-btn" id="redoBtn" disabled>↪️ 重做</button>
+          <button class="toolbar-btn" id="gridToggleBtn" onclick="toggleGrid()">📐 网格</button>
+          <button id="zoomOutBtn" class="toolbar-btn" onclick="zoomOut()">🔍-</button>
+          <span id="zoomLevel">100%</span>
+          <button id="zoomInBtn" class="toolbar-btn" onclick="zoomIn()">🔍+</button>
+        </div>
+        <div class="connection-status-bar" id="connectionStatusBar">
+          <span id="connectionStatusText"></span>
+          <button class="cancel-btn" onclick="cancelConnection()">取消</button>
+        </div>
+        <div class="topology-canvas-container">
+          <div class="topology-canvas grid-visible" id="topologyCanvas">
+          </div>
+        </div>
+        <div class="canvas-footer">
+          <span class="canvas-hint">💡 拖拽组件到画布 | 点击锚点连线 | 双击编辑名称 | 选中后✕删除 | 空白处拖拽框选多组件 | Ctrl+点击多选</span>
+        </div>
+      </main>
+
+      <!-- 右侧属性面板 -->
+      <aside class="property-panel">
+        <div class="panel-section" id="nodeProperties" style="display:none;">
+          <h3>📝 组件属性</h3>
+          <form id="propertyForm">
+            <div class="form-group">
+              <label>名称</label>
+              <input type="text" id="propName" placeholder="组件名称">
+            </div>
+            <div class="form-group">
+              <label>类型</label>
+              <input type="text" id="propType" readonly>
+            </div>
+            <div class="form-group" id="propConfigArea">
+              <!-- 动态配置项 -->
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn-secondary" onclick="deleteSelectedNode()">🗑️ 删除</button>
+              <button type="button" class="btn-primary" onclick="applyProperties()">✓ 应用</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="panel-section" id="connectionProperties" style="display:none;">
+          <h3>🔗 连接线属性</h3>
+          <form id="connectionForm">
+            <div class="form-group">
+              <label>带宽</label>
+              <input type="text" id="connBandwidth" placeholder="如: 1000Mbps">
+            </div>
+            <div class="form-group">
+              <label>颜色</label>
+              <input type="color" id="connColor" value="#666666">
+            </div>
+            <div class="form-group">
+              <label>粗细</label>
+              <input type="range" id="connWidth" min="1" max="10" value="3">
+            </div>
+            <div class="form-group">
+              <label>样式</label>
+              <select id="connStyle">
+                <option value="solid">实线</option>
+                <option value="dashed">虚线</option>
+                <option value="arrow">箭头</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>描述</label>
+              <input type="text" id="connDescription" placeholder="连接描述">
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn-secondary" onclick="deleteSelectedConnection()">🗑️ 删除</button>
+              <button type="button" class="btn-primary" onclick="applyConnectionProperties()">✓ 应用</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="panel-section" id="zoneProperties" style="display:none;">
+          <h3>🗺️ 区域属性</h3>
+          <form id="zoneForm">
+            <div class="form-group">
+              <label>名称</label>
+              <input type="text" id="zoneName" placeholder="区域名称">
+            </div>
+            <div class="form-group">
+              <label>背景颜色</label>
+              <div style="display:flex;gap:4px;flex-wrap:wrap;">
+                <span class="color-swatch" data-color="#e6f7ff" style="background:#e6f7ff;" onclick="selectZoneColor(this)"></span>
+                <span class="color-swatch" data-color="#fff3e0" style="background:#fff3e0;" onclick="selectZoneColor(this)"></span>
+                <span class="color-swatch" data-color="#f0fff0" style="background:#f0fff0;" onclick="selectZoneColor(this)"></span>
+                <span class="color-swatch" data-color="#e8f4fd" style="background:#e8f4fd;" onclick="selectZoneColor(this)"></span>
+                <span class="color-swatch" data-color="#f9f0ff" style="background:#f9f0ff;" onclick="selectZoneColor(this)"></span>
+                <span class="color-swatch" data-color="#fff0f0" style="background:#fff0f0;" onclick="selectZoneColor(this)"></span>
+                <span class="color-swatch" data-color="#f5f5f5" style="background:#f5f5f5;" onclick="selectZoneColor(this)"></span>
+                <span class="color-swatch" data-color="#fffbe6" style="background:#fffbe6;" onclick="selectZoneColor(this)"></span>
+              </div>
+              <input type="hidden" id="zoneBgColor" value="#e6f7ff">
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn-secondary" onclick="deleteSelectedZone()">🗑️ 删除</button>
+              <button type="button" class="btn-primary" onclick="applyZoneProperties()">✓ 应用</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="panel-section" id="topologyInfo">
+          <h3>ℹ️ 拓扑信息</h3>
+          <div class="info-item">
+            <label>组件数量</label>
+            <span id="nodeCount">0</span>
+          </div>
+          <div class="info-item">
+            <label>连接数量</label>
+            <span id="connectionCount">0</span>
+          </div>
+          <div class="info-item">
+            <label>安全产品</label>
+            <span id="securityProductCount">0</span>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- 右下角返回按钮 -->
+    <button class="back-to-solution" onclick="goBack()">← 返回方案编辑</button>
+  </div>
+
+  <script src="topology-icons.js"></script>
+  <script src="topology-templates.js"></script>
+  <script src="topology-pro.js"></script>
+</body>
+</html>

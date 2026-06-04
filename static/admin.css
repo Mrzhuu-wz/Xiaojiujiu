@@ -1,0 +1,341 @@
+/* ==============================
+   数据统计中心样式
+   主题：延续电信红 C00000
+   ============================== */
+
+:root {
+  --red: #C00000;
+  --red-light: #FBEAEA;
+  --bg: #F5F5F5;
+  --card-bg: #FFF;
+  --text: #333;
+  --text-secondary: #888;
+  --text-muted: #AAA;
+  --border: #E8E8E8;
+  --shadow: 0 2px 8px rgba(0,0,0,0.06);
+  --radius: 10px;
+  --radius-sm: 6px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.6;
+}
+
+/* ========== Header ========== */
+.topbar {
+  background: linear-gradient(135deg, var(--red) 0%, #A00000 100%);
+  color: #FFF;
+  padding: 14px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 12px rgba(192,0,0,0.25);
+}
+
+.topbar .eyebrow {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  opacity: 0.75;
+  margin-bottom: 2px;
+}
+
+.topbar h1 {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ========== Buttons ========== */
+.primary-btn {
+  background: #FFF;
+  color: var(--red);
+  border: none;
+  padding: 8px 20px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.primary-btn:hover { background: #F0F0F0; }
+
+.secondary-btn {
+  background: rgba(255,255,255,0.15);
+  color: #FFF;
+  border: 1px solid rgba(255,255,255,0.3);
+  padding: 7px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: background 0.2s;
+}
+
+.secondary-btn:hover { background: rgba(255,255,255,0.25); }
+
+.secondary-btn.small { font-size: 12px; padding: 5px 12px; }
+
+.header-select {
+  background: rgba(255,255,255,0.15);
+  color: #FFF;
+  border: 1px solid rgba(255,255,255,0.3);
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  cursor: pointer;
+  outline: none;
+}
+
+.header-select option { color: #333; background: #FFF; }
+
+/* ========== Dashboard Layout ========== */
+.dashboard {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px 20px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ========== Stats Cards ========== */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+.stat-card {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  padding: 20px 22px;
+  box-shadow: var(--shadow);
+  border-left: 4px solid var(--red);
+}
+
+.stat-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.stat-trend {
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+.stat-trend.up { color: #52c41a; }
+.stat-trend.down { color: var(--red); }
+.stat-trend.neutral { color: var(--text-muted); }
+
+.stat-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 6px;
+}
+
+/* ========== Charts Row ========== */
+.charts-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.chart-card {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  box-shadow: var(--shadow);
+}
+
+.chart-card h3 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--text);
+}
+
+.chart-container {
+  height: 180px;
+  position: relative;
+}
+
+.chart-container.small {
+  height: 140px;
+}
+
+/* ========== Detail Row ========== */
+.detail-row {
+  display: grid;
+  grid-template-columns: 1.3fr 0.7fr;
+  gap: 14px;
+  align-items: start;
+}
+
+.card {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  box-shadow: var(--shadow);
+}
+
+.card h3 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--text);
+}
+
+.card-group {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ========== Table ========== */
+.table-wrap {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+thead th {
+  color: var(--text-secondary);
+  font-weight: 500;
+  text-align: left;
+  padding: 8px 0 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+tbody td {
+  padding: 8px 0;
+  border-bottom: 1px solid #F0F0F0;
+  vertical-align: middle;
+}
+
+tbody td.empty {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 30px 0;
+}
+
+.download-link {
+  color: #378ADD;
+  text-decoration: none;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.download-link:hover { text-decoration: underline; }
+
+/* ========== Bar List ========== */
+.bar-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.bar-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.bar-label {
+  flex: 0 0 90px;
+  font-size: 12px;
+  color: var(--text);
+  text-align: right;
+}
+
+.bar-fill {
+  flex: 1;
+  height: 22px;
+  border-radius: 11px;
+  background: var(--red-light);
+  position: relative;
+  overflow: hidden;
+}
+
+.bar-inner {
+  height: 100%;
+  border-radius: 11px;
+  background: var(--red);
+  transition: width 0.6s ease;
+  display: flex;
+  align-items: center;
+  padding-left: 10px;
+}
+
+.bar-value {
+  font-size: 12px;
+  font-weight: 600;
+  color: #FFF;
+}
+
+/* ========== Data Grid ========== */
+.data-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.data-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+}
+
+.data-item .key {
+  color: var(--text-secondary);
+}
+
+.data-item .val {
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* ========== Responsive ========== */
+@media (max-width: 900px) {
+  .stats-row { grid-template-columns: repeat(2, 1fr); }
+  .charts-row { grid-template-columns: 1fr; }
+  .detail-row { grid-template-columns: 1fr; }
+
+  .header-right { gap: 6px; }
+  .topbar h1 { font-size: 15px; }
+}
+
+@media (max-width: 600px) {
+  .stats-row { grid-template-columns: 1fr; }
+  .dashboard { padding: 16px 10px; }
+}

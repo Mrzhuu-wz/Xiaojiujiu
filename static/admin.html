@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>数据统计中心 - Xiaojiujiu</title>
+    <link rel="stylesheet" href="admin.css" />
+  </head>
+  <body>
+    <!-- ========== Header ========== -->
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Xiaojiujiu Data Dashboard</p>
+        <h1>数据统计中心</h1>
+      </div>
+      <div class="header-right">
+        <select id="timeRange" class="header-select">
+          <option value="7">近7天</option>
+          <option value="14">近14天</option>
+          <option value="30">近30天</option>
+          <option value="all">全部</option>
+        </select>
+        <button id="refreshBtn" class="secondary-btn small" type="button">刷新</button>
+        <a href="/" class="secondary-btn small">返回工作台</a>
+      </div>
+    </header>
+
+    <main class="dashboard">
+      <!-- 统计卡片 -->
+      <section class="stats-row" id="statsCards">
+        <div class="stat-card" data-key="totalPV">
+          <p class="stat-label">总页面浏览量</p>
+          <p class="stat-value">--</p>
+          <p class="stat-trend" data-trend="pv"></p>
+        </div>
+        <div class="stat-card" data-key="totalUV">
+          <p class="stat-label">独立访客</p>
+          <p class="stat-value">--</p>
+          <p class="stat-trend" data-trend="uv"></p>
+        </div>
+        <div class="stat-card" data-key="totalExports">
+          <p class="stat-label">方案导出总数</p>
+          <p class="stat-value">--</p>
+          <p class="stat-trend" data-trend="export"></p>
+        </div>
+        <div class="stat-card" data-key="activeTemplates">
+          <p class="stat-label">活跃模板数</p>
+          <p class="stat-value">--</p>
+          <p class="stat-sub" data-sub="template"></p>
+        </div>
+      </section>
+
+      <!-- 趋势图 -->
+      <section class="charts-row">
+        <div class="chart-card">
+          <h3>访问趋势</h3>
+          <div class="chart-container">
+            <canvas id="visitChart"></canvas>
+          </div>
+        </div>
+        <div class="chart-card">
+          <h3>方案导出趋势</h3>
+          <div class="chart-container">
+            <canvas id="exportChart"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- 下栏 -->
+      <section class="detail-row">
+        <!-- 最近导出记录 -->
+        <div class="card">
+          <h3>最近导出记录</h3>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>方案名称</th>
+                  <th>场景</th>
+                  <th>模板</th>
+                  <th>时间</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="exportTableBody">
+                <tr><td colspan="5" class="empty">暂无导出记录</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 右侧 -->
+        <div class="card-group">
+          <!-- 场景导出分布 -->
+          <div class="card">
+            <h3>场景导出分布</h3>
+            <div id="scenarioDist" class="bar-list"></div>
+          </div>
+
+          <!-- 访问时段分布 -->
+          <div class="card">
+            <h3>访问时段分布</h3>
+            <div class="chart-container small">
+              <canvas id="hourChart"></canvas>
+            </div>
+          </div>
+
+          <!-- 数据概览 -->
+          <div class="card">
+            <h3>数据概览</h3>
+            <div class="data-grid" id="dataOverview"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="admin.js"></script>
+  </body>
+</html>

@@ -1,0 +1,577 @@
+/* 拓扑编辑器样式 - 简化版 */
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.topology-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #f5f5f5;
+  overflow: hidden;
+}
+
+.topology-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  background: linear-gradient(135deg, #C00000 0%, #8B0000 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  flex-shrink: 0;
+}
+
+.topology-header h1 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.topology-header button {
+  padding: 8px 16px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.btn-primary {
+  background: white;
+  color: #C00000;
+}
+
+.btn-secondary {
+  background: rgba(255,255,255,0.2);
+  color: white;
+  border: 1px solid rgba(255,255,255,0.3);
+}
+
+.topology-main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* 左侧组件库 */
+.component-library {
+  width: 260px;
+  background: white;
+  border-right: 1px solid #e0e0e0;
+  overflow-y: auto;
+  padding: 16px;
+  flex-shrink: 0;
+}
+
+.library-section {
+  margin-bottom: 24px;
+}
+
+.library-section h3 {
+  font-size: 14px;
+  color: #333;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #C00000;
+}
+
+.component-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.component-item {
+  background: #f8f9fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  padding: 8px;
+  cursor: grab;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.component-item:hover {
+  border-color: #C00000;
+  background: #fff;
+}
+
+/* 中央画布 */
+.topology-canvas-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #fafafa;
+  position: relative;
+  min-width: 0;
+}
+
+.canvas-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: white;
+  border-bottom: 1px solid #e0e0e0;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.toolbar-btn {
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+
+.toolbar-btn:hover:not(:disabled) {
+  background: #e0e0e0;
+}
+
+.toolbar-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.topology-canvas-container {
+  flex: 1;
+  position: relative;
+  overflow: auto;
+  background: white;
+  border: 1px solid #e0e0e0;
+  margin: 8px;
+  border-radius: 4px;
+}
+
+.topology-canvas {
+  position: relative;
+  width: 2000px;
+  height: 2000px;
+  background: white;
+}
+
+.topology-canvas.grid-visible {
+  background-image: linear-gradient(rgba(0,0,0,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.08) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* 节点样式 */
+.node-item {
+  position: absolute;
+  cursor: move;
+  user-select: none;
+  z-index: 10;
+  background: white;
+  border: 2px solid #C00000;
+  border-radius: 8px;
+  padding: 8px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  width: 105px;
+  height: 85px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.node-label {
+  font-size: 12px;
+  color: #333;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.node-item svg {
+  width: 45px !important;
+  height: 45px !important;
+  display: block !important;
+  margin: 0 auto;
+}
+.node-item.node-selected { outline: 3px solid #C00000; outline-offset: 2px; z-index: 20; }
+.node-item.node-multi-selected { outline: 3px dashed #FF6D00; outline-offset: 2px; }
+
+/* 连线锚点 - 4个方向 — 仅选中时显示 */
+.anchor {
+  position: absolute; width: 10px; height: 10px;
+  background: #C00000; border: 2px solid #FFF; border-radius: 50%;
+  cursor: crosshair; z-index: 25; opacity: 0; transition: opacity 0.15s, transform 0.15s;
+  pointer-events: none;
+}
+/* 只有选中节点时才显示锚点 */
+.node-item.node-selected .anchor { opacity: 1; pointer-events: auto; }
+/* 连线模式：点击锚点后所有节点锚点都显示 */
+.node-item.connect-mode .anchor { opacity: 1; pointer-events: auto; }
+.anchor-active { opacity: 1 !important; background: #00C853; transform: scale(1.4); }
+.a-top { top: -6px; left: 50%; margin-left: -5px; }
+.a-btm { bottom: -6px; left: 50%; margin-left: -5px; }
+.a-lft { left: -6px; top: 50%; margin-top: -5px; }
+.a-rgt { right: -6px; top: 50%; margin-top: -5px; }
+
+/* 状态栏 */
+.connection-status-bar {
+  display: none; align-items: center; gap: 8px;
+  padding: 6px 12px; background: #FFF5F5; border-bottom: 1px solid #FDD;
+  font-size: 12px; color: #C00000;
+}
+.connection-status-bar .cancel-btn {
+  padding: 2px 10px; border: 1px solid #C00000; border-radius: 4px;
+  background: #FFF; color: #C00000; cursor: pointer; font-size: 11px;
+}
+
+.node-name {
+  font-size: 11px;
+  margin-top: 4px;
+  color: #333;
+}
+
+.control-point {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: black;
+  border: 2px solid white;
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 101;
+}
+
+.delete-btn {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 20px;
+  height: 20px;
+  background: #C00000;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: bold;
+  z-index: 100;
+}
+
+/* 连线删除按钮 - 仅选中线条时显示在中点 */
+.conn-delete-btn {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  background: #C00000;
+  color: white;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: bold;
+  line-height: 1;
+  z-index: 30;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+  transition: transform 0.15s, background 0.15s;
+  user-select: none;
+  animation: connDeletePop 0.2s ease;
+}
+@keyframes connDeletePop {
+  from { transform: scale(0); }
+  to { transform: scale(1); }
+}
+.conn-delete-btn:hover {
+  transform: scale(1.25);
+  background: #ff1a1a;
+}
+
+/* 连接线层 */
+#connectionsLayer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 2000px;
+  height: 2000px;
+  z-index: 5;
+  pointer-events: auto;
+}
+
+/* 区域组件 */
+.zone-item {
+  position: absolute;
+  border: 2px dashed #C00000;
+  border-radius: 8px;
+  z-index: 0;
+  cursor: move;
+  min-width: 120px;
+  min-height: 80px;
+}
+
+.zone-label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: 6px 12px;
+  background: #C00000;
+  color: white;
+  font-size: 12px;
+  border-radius: 6px 6px 0 0;
+  cursor: move;
+  user-select: none;
+}
+
+.zone-resize {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 20px;
+  height: 20px;
+  background: #C00000;
+  color: white;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: nwse-resize;
+  font-size: 12px;
+}
+
+/* 文字标签 */
+.label-item {
+  position: absolute;
+  font-size: 14px;
+  color: #C00000;
+  background: rgba(255,255,255,0.9);
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: move;
+  user-select: none;
+  z-index: 15;
+}
+
+/* 右侧属性面板 */
+.property-panel {
+  width: 280px;
+  background: white;
+  border-left: 1px solid #e0e0e0;
+  padding: 16px;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+.panel-section {
+  margin-bottom: 24px;
+}
+
+.panel-section h3 {
+  font-size: 14px;
+  color: #333;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #C00000;
+}
+
+.form-group {
+  margin-bottom: 12px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+.form-actions button {
+  flex: 1; padding: 8px 12px; border: none; border-radius: 6px;
+  cursor: pointer; font-weight: 600; font-size: 13px;
+}
+.form-actions .btn-primary { background: #C00000; color: #FFF; }
+.form-actions .btn-secondary { background: #F5F5F5; color: #333; border: 1px solid #DDD; }
+.form-actions .btn-danger { background: #FFF5F5; color: #C00000; border: 1px solid #FCC; }
+
+.info-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.info-item label {
+  font-size: 12px;
+  color: #666;
+}
+
+.info-item span {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+/* 连接状态提示条 */
+.connection-status-bar {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: #FFF3E0;
+  border: 1px solid #FFB74D;
+  font-size: 13px;
+  color: #E65100;
+}
+
+.connection-status-bar.visible {
+  display: flex;
+}
+
+.cancel-btn {
+  background: #FF9800;
+  color: white;
+  border: none;
+  padding: 4px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+/* 返回按钮 */
+.back-to-solution {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: #C00000;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 24px;
+  cursor: pointer;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(192, 0, 0, 0.3);
+}
+
+/* ============ 暗黑主题 ============ */
+/* 颜色色块 */
+.color-swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  display: inline-block;
+  transition: all 0.2s;
+}
+.color-swatch:hover { border-color: #C00000; transform: scale(1.1); }
+.color-swatch.active { border-color: #C00000; box-shadow: 0 0 0 2px rgba(192,0,0,0.3); }
+
+/* 节点删除按钮 */
+.node-del-btn {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ff4d4f;
+  color: #fff;
+  border: 2px solid white;
+  cursor: pointer;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+  line-height: 1;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+.node-del-btn:hover { background: #ff1f1f; transform: scale(1.1); }
+
+/* 区域删除按钮 */
+.zone-del-btn {
+  position: absolute;
+  top: 4px;
+  right: 8px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #ff4d4f;
+  color: #fff;
+  border: 2px solid white;
+  cursor: pointer;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 4;
+  line-height: 1;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+.zone-del-btn:hover { background: #ff1f1f; transform: scale(1.1); }
+
+.form-group small { display: block; font-size: 10px; color: #999; margin-top: 2px; }
+
+[data-theme="dark"] body,
+html[data-theme="dark"] body { background: #1a1a2e; color: #eee; }
+[data-theme="dark"] .topology-container { background: #16213e; }
+[data-theme="dark"] .component-library { background: #0f3460; border-color: #1a1a3e; }
+[data-theme="dark"] .component-item,
+[data-theme="dark"] .component-item div,
+[data-theme="dark"] .component-item span { color: #eee !important; }
+[data-theme="dark"] .component-item:hover { background: #1a1a3e; }
+[data-theme="dark"] .component-item svg { color: #e94560 !important; }
+[data-theme="dark"] .library-section h3 { color: #ccc; }
+[data-theme="dark"] .property-panel { background: #0f3460; border-color: #1a1a3e; color: #eee; }
+[data-theme="dark"] .property-panel label,
+[data-theme="dark"] .property-panel h3 { color: #ccc; }
+[data-theme="dark"] .property-panel input,
+[data-theme="dark"] .property-panel select { background: #1a1a2e; color: #eee; border-color: #444; }
+[data-theme="dark"] .topology-canvas { background: #1a1a2e; }
+[data-theme="dark"] .topology-canvas.grid-visible { background-image: radial-gradient(circle, #444 2px, transparent 2px); background-size: 20px 20px; }
+[data-theme="dark"] .node-item { background: #16213e; border-color: #e94560; }
+[data-theme="dark"] .node-item .node-label,
+[data-theme="dark"] .node-item div { color: #eee !important; }
+[data-theme="dark"] .node-item svg { color: #e94560 !important; }
+[data-theme="dark"] .canvas-toolbar { background: #0f3460; border-color: #333; }
+[data-theme="dark"] .canvas-footer { background: #0f3460; color: #aaa; }
+[data-theme="dark"] .toolbar-btn { color: #ccc; background: transparent; }
+[data-theme="dark"] .toolbar-btn:hover { background: #1a1a2e; color: #fff; }
+[data-theme="dark"] .form-actions .btn-primary { background: #e94560; color: #fff; }
+[data-theme="dark"] .form-actions .btn-secondary { background: #1a1a2e; color: #eee; border-color: #444; }
+[data-theme="dark"] .form-actions .btn-danger { background: #3d0000; color: #ff6b6b; border-color: #600; }
+[data-theme="dark"] .btn-secondary { background: rgba(255,255,255,0.1); color: #fff; border-color: rgba(255,255,255,0.2); }
+[data-theme="dark"] .btn-primary { background: #e94560; color: #fff; }
+[data-theme="dark"] .topology-header { background: linear-gradient(135deg, #e94560 0%, #6b0000 100%); }
+[data-theme="dark"] .panel-section { color: #eee; }
+[data-theme="dark"] .toolbar-btn:hover { background: #1a1a2e; }
+[data-theme="dark"] .topology-header { background: linear-gradient(135deg, #e94560 0%, #c00000 100%); }
+[data-theme="dark"] .conn-delete-btn { background: #e94560; border-color: #333; }
+[data-theme="dark"] .conn-delete-btn:hover { background: #ff3355; }
+}
