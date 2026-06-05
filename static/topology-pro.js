@@ -14,10 +14,8 @@ function newConnId() {
   return 'c' + Date.now() + '_' + _connIdCounter;
 }
 
-// 节点尺寸（CSS固定: width:100px, height:88px, box-sizing:border-box）
-// 图标视觉中心≈(50, 37) — 45px图标flex居中于88px盒子
-var NODE_CX = 30, NODE_CY = 28;
-var NODE_W = 100, NODE_H = 88, NODE_MIDX = 50, NODE_MIDY = 44;
+// 节点尺寸（CSS固定: 105×85, box-sizing:border-box）
+var NODE_W = 105, NODE_H = 85, NODE_MIDX = 52.5, NODE_MIDY = 42.5;
 
 // 获取节点中心坐标（简单圆心连线）
 function nodeCenter(node) {
@@ -743,6 +741,7 @@ function loadTemplate() {
         topo.nodes = deepClone(d.nodes);
         topo.connections = deepClone(d.connections || []);
         topo.zones = deepClone(d.zones || []);
+        topo.textBoxes = deepClone(d.textBoxes || []);
         topo.connections.forEach(function(c) { if (!c.id) c.id = newConnId(); });
         saveHistory(); renderCanvas(); renderPropPanel();
         return;
@@ -835,7 +834,7 @@ function generateTopologySVG() {
   topo.nodes.forEach(function(node) {
     var nx = tx(node.x), ny = ty(node.y);
     // 节点背景
-    parts.push('<rect x="' + nx + '" y="' + ny + '" width="' + NODE_W + '" height="' + NODE_H + '" rx="6" fill="white" stroke="#e0e0e0" stroke-width="1"/>');
+    parts.push('<rect x="' + nx + '" y="' + ny + '" width="' + NODE_W + '" height="' + NODE_H + '" rx="6" fill="white" stroke="#C00000" stroke-width="2"/>');
     // 内嵌图标 SVG
     var icon = (window.TopologyIcons || TopologyIcons)[node.type];
     if (icon) {
@@ -851,6 +850,11 @@ function generateTopologySVG() {
     // 标签文字
     var lbl = node.label || (icon ? icon.name : '');
     parts.push('<text x="' + (nx + NODE_MIDX) + '" y="' + (ny + NODE_H - 6) + '" font-size="11" fill="#333" text-anchor="middle" font-family="sans-serif">' + xmlEscape(lbl) + '</text>');
+  });
+
+  // 4. 文字标注层
+  (topo.textBoxes || []).forEach(function(tb) {
+    parts.push('<text x="' + (tx(tb.x) + 4) + '" y="' + (ty(tb.y) + 18) + '" font-size="14" fill="#333" font-family="sans-serif">' + xmlEscape(tb.text) + '</text>');
   });
 
   parts.push('</svg>');
@@ -919,9 +923,9 @@ function topologyToImage(callback) {
 }
 
 function saveTopology() {
-  var d = {nodes: deepClone(topo.nodes), connections: deepClone(topo.connections), zones: deepClone(topo.zones || [])};
+  var d = {nodes: deepClone(topo.nodes), connections: deepClone(topo.connections), zones: deepClone(topo.zones || []), textBoxes: deepClone(topo.textBoxes || [])};
   localStorage.setItem('topology_data', JSON.stringify(d));
-  console.log('[拓扑保存] JSON 数据已保存，节点数:', topo.nodes.length, '连线数:', topo.connections.length);
+  console.log('[拓扑保存] JSON 数据已保存，节点数:', topo.nodes.length, '连线数:', topo.connections.length, '文本框数:', topo.textBoxes.length);
 
   // 生成真实截图并双保险保存到 localStorage（跨页面共享）
   topologyToImage(function(dataUrl) {
@@ -941,7 +945,7 @@ function saveTopology() {
       alert('拓扑数据已保存，但截图生成失败。请检查浏览器控制台。');
     }
     // 同步到服务端
-    var payload = {nodes: d.nodes, connections: d.connections, zones: d.zones, image: dataUrl || null};
+    var payload = {nodes: d.nodes, connections: d.connections, zones: d.zones, textBoxes: d.textBoxes, image: dataUrl || null};
     fetch('/api/save-topology', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)}).catch(function(e){ console.log('[拓扑保存] 服务端同步失败（如使用Netlify可忽略）:', e.message); });
   });
 }
@@ -999,6 +1003,13 @@ function exportTopology() {
     svgParts.push('<text class="node-label" x="'+(node.x+NODE_MIDX)+'" y="'+(node.y+NODE_H-10)+'">'+xmlEscape(node.label||icon.name)+'</text>');
   });
 
+  // 文本框层
+  if (topo.textBoxes) {
+    topo.textBoxes.forEach(function(tb) {
+      svgParts.push('<text x="'+(tb.x+4)+'" y="'+(tb.y+18)+'" font-size="14" fill="#333" font-family="sans-serif">'+tb.text+'</text>');
+    });
+  }
+
   svgParts.push('</svg>');
   var blob = new Blob([svgParts.join('')], {type:'image/svg+xml'});
   var a = document.createElement('a');
@@ -1010,6 +1021,7 @@ function handleTemplateChange(val) {
     topo.nodes = deepClone(TopologyTemplates['three-tier'].nodes);
     topo.connections = deepClone(TopologyTemplates['three-tier'].connections);
     topo.zones = deepClone(TopologyTemplates['three-tier'].zones||[]);
+    topo.textBoxes = deepClone(TopologyTemplates['three-tier'].textBoxes||[]);
     topo.connections.forEach(function(c) { if (!c.id) c.id = newConnId(); });
     topo.selectedZone = null;
     saveHistory(); renderCanvas(); renderPropPanel();
@@ -1021,6 +1033,7 @@ function handleTemplateChange(val) {
       topo.nodes = deepClone(ts[name].nodes||[]);
       topo.connections = deepClone(ts[name].connections||[]);
       topo.zones = deepClone(ts[name].zones||[]);
+      topo.textBoxes = deepClone(ts[name].textBoxes||[]);
       topo.connections.forEach(function(c) { if (!c.id) c.id = newConnId(); });
       topo.selectedNode = null; topo.selectedConnId = null; topo.selectedZone = null; topo.multiSelected = [];
       saveHistory(); renderCanvas(); renderPropPanel();
@@ -1033,7 +1046,7 @@ function saveCurrentAsTemplate() {
   var n = prompt('模板名称：','自定义拓扑');
   if (!n) return;
   var ts = JSON.parse(localStorage.getItem('saved_templates')||'{}');
-  ts[n] = {nodes:deepClone(topo.nodes), connections:deepClone(topo.connections), zones:deepClone(topo.zones||[])};
+  ts[n] = {nodes:deepClone(topo.nodes), connections:deepClone(topo.connections), zones:deepClone(topo.zones||[]), textBoxes:deepClone(topo.textBoxes||[])};
   localStorage.setItem('saved_templates', JSON.stringify(ts));
   updateTemplateSelect();
 }
